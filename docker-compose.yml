@@ -6,7 +6,6 @@ services:
     build: .
     container_name: ai-report-app
     restart: unless-stopped
-    env_file: .env
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
     command: >
