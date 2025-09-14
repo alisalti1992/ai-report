@@ -17,7 +17,7 @@ model CrawlJob {
   id            String   @id @default(uuid())
   url           String
   email         String
-  status        String   @default("pending")
+  status        String   @default("pending") // pending, verified, processing, completed, failed
   verified      Boolean  @default(false)
   verifyToken   String?
   verifyAttempts Int     @default(0)
@@ -26,6 +26,10 @@ model CrawlJob {
   robotsTxt     String?
   sitemapXml    String?
   sampleSitemap Json?
+  crawlStats    Json?    // crawl statistics and completion info
+  error         String?  // main crawl error message if job fails
+  errorDetails  Json?    // detailed error information with stack trace
+  failedStep    String?  // which step failed (e.g. "robots.txt", "sitemap", "crawl_pages")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
@@ -36,18 +40,25 @@ model CrawlJob {
 
 model CrawlPage {
   id          String   @id @default(uuid())
-  jobId       String
+  crawlJobId  String   @map("crawl_job_id")
   url         String
   title       String?
   html        String?
   statusCode  Int?
-  pageType    String?  // blog, service, product, category, other
+  redirected  Boolean  @default(false)
+  finalUrl    String?  // final URL after redirects
   level       Int?     // sitemap level/depth
-  crawledAt   DateTime?
+  pathname    String?  // URL pathname
+  segments    Json?    // URL segments array
+  priority    Float?   // sitemap priority
+  changefreq  String?  // sitemap changefreq
+  lastmod     String?  // sitemap lastmod
+  error       String?  // crawl error message if page fails
+  crawledAt   DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  job         CrawlJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job         CrawlJob @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
   
   @@map("crawl_pages")
 }

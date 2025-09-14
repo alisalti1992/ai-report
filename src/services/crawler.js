@@ -77,10 +77,18 @@ class CrawlerService {
     } catch (error) {
       console.error(`Error starting crawl job ${jobId}:`, error);
       
-      // Update job status to failed
+      // Update job status to failed with error details
       await prisma.crawlJob.update({
         where: { id: jobId },
-        data: { status: 'failed' }
+        data: { 
+          status: 'failed',
+          error: error.message,
+          errorDetails: {
+            message: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          }
+        }
       }).catch(console.error);
       
       throw error;
@@ -117,6 +125,16 @@ class CrawlerService {
       
     } catch (error) {
       console.error(`Error processing URL and homepage for job ${job.id}:`, error);
+      
+      // Update job with step failure info
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: { 
+          failedStep: 'url_homepage',
+          error: `URL/Homepage processing failed: ${error.message}`
+        }
+      }).catch(console.error);
+      
       throw error;
     }
   }
@@ -164,6 +182,16 @@ class CrawlerService {
       
     } catch (error) {
       console.error(`Error processing robots.txt for job ${job.id}:`, error);
+      
+      // Update job with step failure info
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: { 
+          failedStep: 'robots_txt',
+          error: `Robots.txt processing failed: ${error.message}`
+        }
+      }).catch(console.error);
+      
       throw error;
     }
   }
@@ -214,6 +242,16 @@ class CrawlerService {
       
     } catch (error) {
       console.error(`Error processing sitemap.xml for job ${job.id}:`, error);
+      
+      // Update job with step failure info
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: { 
+          failedStep: 'sitemap_xml',
+          error: `Sitemap.xml processing failed: ${error.message}`
+        }
+      }).catch(console.error);
+      
       throw error;
     }
   }
@@ -348,6 +386,23 @@ class CrawlerService {
       
     } catch (error) {
       console.error(`Error crawling sample pages for job ${job.id}:`, error);
+      
+      // Update job with step failure info
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: { 
+          status: 'failed',
+          failedStep: 'crawl_pages',
+          error: `Page crawling failed: ${error.message}`,
+          errorDetails: {
+            message: error.message,
+            stack: error.stack,
+            step: 'crawl_pages',
+            timestamp: new Date().toISOString()
+          }
+        }
+      }).catch(console.error);
+      
       throw error;
     }
   }
@@ -425,6 +480,16 @@ class CrawlerService {
       
     } catch (error) {
       console.error(`Error creating sample sitemap for job ${job.id}:`, error);
+      
+      // Update job with step failure info
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: { 
+          failedStep: 'sample_sitemap',
+          error: `Sample sitemap creation failed: ${error.message}`
+        }
+      }).catch(console.error);
+      
       throw error;
     }
   }
