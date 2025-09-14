@@ -171,8 +171,8 @@ router.get('/', (req, res) => {
             
             <div class="features">
                 <div class="feature">
-                    <h3>🤖 AI Analysis</h3>
-                    <p>Advanced AI analyzes your website's performance, SEO, accessibility, and user experience</p>
+                    <h3>🤖 AI Readability Report</h3>
+                    <p>AI readability report analysis</p>
                 </div>
                 <div class="feature">
                     <h3>📊 Comprehensive Reports</h3>

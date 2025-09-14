@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # AI Report Application
+  app:
+    build: .
+    container_name: ai-report-app
+    restart: unless-stopped
+    environment:
+      # Database (External - configure your own PostgreSQL)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://user:password@localhost:5432/ai_report}
+      
+      # Service Configuration
+      PORT: 5555
+      SERVICE_URL_APP: ${SERVICE_URL_APP:-http://localhost:5555}
+      API_TOKEN: ${API_TOKEN:-your-secure-api-token-change-me}
+      
+      # Application Branding
+      APP_NAME: ${APP_NAME:-AI Report}
+      APP_LOGO_URL: ${APP_LOGO_URL:-}
+      APP_PRIMARY_COLOR: ${APP_PRIMARY_COLOR:-#007bff}
+      APP_ACCENT_COLOR: ${APP_ACCENT_COLOR:-#28a745}
+      
+      # SMTP Configuration
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-"AI Report <noreply@localhost>"}
+      
+      # Browserless Configuration
+      BROWSERLESS_URL: ${BROWSERLESS_URL:-}
+      BROWSERLESS_TOKEN: ${BROWSERLESS_TOKEN:-}
+      
+      # AI Webhooks
+      AI_PAGE_ANALYZER_HOOK: ${AI_PAGE_ANALYZER_HOOK:-}
+      AI_CRAWL_ANALYZER_HOOK: ${AI_CRAWL_ANALYZER_HOOK:-}
+      
+      # Crawling Configuration
+      CRAWL_FIRST_LEVEL_LIMIT: ${CRAWL_FIRST_LEVEL_LIMIT:-10}
+      
+      # Node Environment
+      NODE_ENV: production
+    ports:
+      - "${PORT:-5555}:5555"
+    command: >
+      sh -c "
+        echo 'Running database migrations...' &&
+        npx prisma migrate deploy &&
+        echo 'Starting application...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5555/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -210,7 +210,6 @@
                     <img src="${config.logoUrl}" alt="${config.appName}" />
                 </div>
             ` : `<h3>Get Your ${config.appName} Website Report</h3>`}
-            <p>Analyze your website's performance, SEO, and user experience with AI-powered insights.</p>
             
             <form class="ai-report-form">
                 <div class="ai-report-form-group">

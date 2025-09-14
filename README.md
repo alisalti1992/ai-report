@@ -4,12 +4,11 @@ AI-powered web crawling and analysis platform that generates comprehensive repor
 
 ## Project Status
 
-✅ **Phase 1-9, 11 Complete**: Core crawling infrastructure, AI integration, frontend report views, and embeddable widget fully implemented  
-🚧 **Phase 10, 12**: Enhanced email verification and deployment features in development
+✅ **Phase 1-12 Complete**: Full-featured AI-powered web analysis platform with Docker deployment ready for production
 
 ## Features
 
-### ✅ Implemented (Phase 1-9, 11)
+### ✅ Implemented (Phase 1-12)
 - **Web Crawling**: Intelligent browserless crawling with automatic background processing
 - **Smart Site Analysis**: Automatic homepage detection, robots.txt parsing, and sitemap discovery
 - **Adaptive Sampling**: Dynamic URL pattern detection and intelligent sample sitemap generation
@@ -28,10 +27,11 @@ AI-powered web crawling and analysis platform that generates comprehensive repor
 - **Embeddable Widget**: Cross-origin compatible widget with environment-based branding
 - **Widget Configuration**: Dynamic server-side configuration loading with CORS support
 - **Embed Code Generator**: Professional embed code generator with copy-to-clipboard functionality
-
-### 🚧 Planned (Phase 10, 12)
-- **Enhanced Email Verification**: SMTP-based 2FA email verification system before processing
-- **Easy Deployment**: Docker support for simple server deployment
+- **Branded Email System**: SMTP-based email service with professional HTML templates
+- **2FA Email Verification**: Secure 6-digit verification codes sent via branded emails
+- **Completion Notifications**: Automated email notifications when reports are ready
+- **Docker Deployment**: Complete containerization with PostgreSQL database and production-ready configuration
+- **Production Ready**: Health checks, security best practices, and scalable architecture
 
 ## Environment Variables
 
@@ -145,10 +145,66 @@ Once the server is running, visit `/api-docs` for interactive Swagger documentat
 
 ## Docker Deployment
 
-```bash
-# Build and run with Docker Compose
-docker compose up -d
-```
+### Quick Start with Docker
+
+**Prerequisites**: You need an external PostgreSQL database
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/alisalti1992/ai-report.git
+   cd ai-report
+   ```
+
+2. **Configure environment**
+   ```bash
+   # Copy the Docker environment template
+   cp .env.docker .env
+   
+   # Edit .env with your database and service configuration
+   nano .env  # Configure DATABASE_URL and other settings
+   ```
+
+3. **Deploy with Docker Compose**
+   ```bash
+   # Build and start the application
+   docker compose up -d
+   
+   # View logs
+   docker compose logs -f app
+   
+   # Stop application
+   docker compose down
+   ```
+
+### Environment Configuration
+
+The following environment variables are required for Docker deployment:
+
+**Essential Configuration:**
+- `DATABASE_URL` - PostgreSQL connection string (external database required)
+- `API_TOKEN` - Secure API token for authentication
+- `SERVICE_URL_APP` - Your public service URL
+- `SMTP_USER`, `SMTP_PASS` - Email service credentials
+- `BROWSERLESS_URL`, `BROWSERLESS_TOKEN` - Browserless service for web crawling
+
+**Optional Configuration:**
+- `APP_NAME`, `APP_LOGO_URL` - Branding customization
+- `APP_PRIMARY_COLOR`, `APP_ACCENT_COLOR` - Color scheme
+- `AI_PAGE_ANALYZER_HOOK`, `AI_CRAWL_ANALYZER_HOOK` - AI analysis webhooks
+
+### Service Architecture
+
+- **app**: Main AI Report application (Port 5555)
+- **External Database**: PostgreSQL database (managed separately)
+- **Minimal Configuration**: Single container deployment for easy scaling
+
+### Production Considerations
+
+- Provide external PostgreSQL database connection
+- Change default API tokens in `.env`
+- Use a reverse proxy (nginx/traefik) for SSL termination
+- Configure proper backup strategy for your external database
+- Monitor resource usage and scale containers as needed
 
 ## License
 

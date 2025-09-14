@@ -3,293 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Report Widget</title>
+    <title>AI Report Widget Demo</title>
     <style>
-        .ai-report-widget {
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 24px;
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            background: linear-gradient(135deg, #007bff10 0%, #007bff05 100%);
+            color: #334155;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
         
-        .ai-report-widget h3 {
-            margin: 0 0 16px 0;
+        .demo-container {
+            max-width: 800px;
+            text-align: center;
+        }
+        
+        .demo-header {
+            margin-bottom: 40px;
+        }
+        
+        .demo-title {
+            color: #007bff;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .demo-subtitle {
+            color: #64748b;
             font-size: 18px;
-            font-weight: 600;
-            color: #111827;
-            text-align: center;
+            margin-bottom: 30px;
         }
         
-        .ai-report-widget p {
-            margin: 0 0 20px 0;
+        .widget-demo {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .embed-info {
+            background: #f8fafc;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 20px;
             font-size: 14px;
-            color: #6b7280;
-            text-align: center;
-            line-height: 1.5;
+            color: #475569;
         }
         
-        .ai-report-form-group {
-            margin-bottom: 16px;
-        }
-        
-        .ai-report-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 6px;
-        }
-        
-        .ai-report-input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-            box-sizing: border-box;
-        }
-        
-        .ai-report-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .ai-report-input.error {
-            border-color: #ef4444;
-        }
-        
-        .ai-report-error {
-            color: #ef4444;
-            font-size: 12px;
-            margin-top: 4px;
-            display: none;
-        }
-        
-        .ai-report-button {
-            width: 100%;
-            padding: 12px 16px;
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.15s ease-in-out;
-        }
-        
-        .ai-report-button:hover:not(:disabled) {
-            background-color: #2563eb;
-        }
-        
-        .ai-report-button:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
-        }
-        
-        .ai-report-success {
-            background-color: #10b981;
-            color: white;
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 14px;
-            margin-top: 16px;
-            display: none;
-        }
-        
-        .ai-report-loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 8px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .ai-report-powered-by {
-            text-align: center;
-            margin-top: 16px;
-            font-size: 12px;
-            color: #9ca3af;
-        }
-        
-        .ai-report-powered-by a {
-            color: #3b82f6;
-            text-decoration: none;
-        }
-        
-        .ai-report-powered-by a:hover {
-            text-decoration: underline;
+        .embed-info strong {
+            color: #007bff;
         }
     </style>
 </head>
 <body>
-    <div class="ai-report-widget">
-        <h3>Get Your AI Website Report</h3>
-        <p>Analyze your website's performance, SEO, and user experience with AI-powered insights.</p>
-        
-        <form id="aiReportForm">
-            <div class="ai-report-form-group">
-                <label for="website-url" class="ai-report-label">Website URL</label>
-                <input 
-                    type="url" 
-                    id="website-url" 
-                    name="url"
-                    class="ai-report-input" 
-                    placeholder="https://example.com"
-                    required
-                >
-                <div class="ai-report-error" id="url-error"></div>
-            </div>
-            
-            <div class="ai-report-form-group">
-                <label for="email" class="ai-report-label">Email Address</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email"
-                    class="ai-report-input" 
-                    placeholder="your@email.com"
-                    required
-                >
-                <div class="ai-report-error" id="email-error"></div>
-            </div>
-            
-            <button type="submit" class="ai-report-button" id="submit-btn">
-                <span id="button-text">Generate Report</span>
-            </button>
-        </form>
-        
-        <div class="ai-report-success" id="success-message">
-            ✅ Report request submitted! Check your email for verification.
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">Widget Demo</h1>
+            <p class="demo-subtitle">Experience the embeddable AI Report widget</p>
         </div>
         
-        <div class="ai-report-powered-by">
-            Powered by <a href="#" target="_blank">AI Report</a>
+        <div class="widget-demo">
+            <!-- AI Report Widget -->
+            <div id="ai-report-widget"></div>
+            <script src="/public/widget.js"></script>
+        </div>
+        
+        <div class="embed-info">
+            <strong>💡 Integration:</strong> This widget is loaded using the embed code. 
+            Visit <strong>/widget/embed</strong> to get your own embed code for any website.
         </div>
     </div>
-
-    <script>
-        // Widget configuration - can be overridden by parent page
-        window.AIReportConfig = window.AIReportConfig || {
-            apiUrl: 'http://localhost:5555',
-            apiToken: 'your-api-token'
-        };
-
-        document.getElementById('aiReportForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const form = e.target;
-            const submitBtn = document.getElementById('submit-btn');
-            const buttonText = document.getElementById('button-text');
-            const successMessage = document.getElementById('success-message');
-            
-            // Reset previous errors
-            clearErrors();
-            
-            // Get form data
-            const formData = new FormData(form);
-            const url = formData.get('url');
-            const email = formData.get('email');
-            
-            // Basic validation
-            if (!isValidUrl(url)) {
-                showError('url-error', 'Please enter a valid URL (including http:// or https://)');
-                return;
-            }
-            
-            if (!isValidEmail(email)) {
-                showError('email-error', 'Please enter a valid email address');
-                return;
-            }
-            
-            // Show loading state
-            submitBtn.disabled = true;
-            buttonText.innerHTML = '<span class="ai-report-loading"></span>Submitting...';
-            
-            try {
-                const response = await fetch(`${window.AIReportConfig.apiUrl}/api/crawljobs`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${window.AIReportConfig.apiToken}`
-                    },
-                    body: JSON.stringify({ url, email })
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    // Success
-                    form.style.display = 'none';
-                    successMessage.style.display = 'block';
-                } else {
-                    // Handle API errors
-                    if (result.error) {
-                        showError('url-error', result.error);
-                    } else {
-                        showError('url-error', 'Something went wrong. Please try again.');
-                    }
-                }
-            } catch (error) {
-                console.error('Widget error:', error);
-                showError('url-error', 'Connection error. Please check your internet connection and try again.');
-            } finally {
-                // Reset button state
-                submitBtn.disabled = false;
-                buttonText.innerHTML = 'Generate Report';
-            }
-        });
-        
-        function isValidUrl(string) {
-            try {
-                const url = new URL(string);
-                return url.protocol === 'http:' || url.protocol === 'https:';
-            } catch (_) {
-                return false;
-            }
-        }
-        
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-        
-        function showError(elementId, message) {
-            const errorElement = document.getElementById(elementId);
-            const inputElement = document.getElementById(elementId.replace('-error', '').replace('website-', ''));
-            
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            inputElement.classList.add('error');
-        }
-        
-        function clearErrors() {
-            const errorElements = document.querySelectorAll('.ai-report-error');
-            const inputElements = document.querySelectorAll('.ai-report-input');
-            
-            errorElements.forEach(el => {
-                el.style.display = 'none';
-                el.textContent = '';
-            });
-            
-            inputElements.forEach(el => {
-                el.classList.remove('error');
-            });
-        }
-    </script>
 </body>
 </html>

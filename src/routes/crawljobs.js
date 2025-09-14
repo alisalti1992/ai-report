@@ -1,7 +1,10 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const { validateApiToken } = require('../middleware/auth');
+const EmailService = require('../services/email');
 const router = express.Router();
+
+const emailService = new EmailService();
 
 /**
  * @swagger
@@ -235,6 +238,15 @@ router.post('/crawljobs', validateApiToken, async (req, res) => {
         verifyToken
       }
     });
+
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(email, verifyToken, crawlJob.id, url);
+      console.log(`Verification email sent to ${email} for job ${crawlJob.id}`);
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      // Don't fail the job creation if email fails - user can still verify manually
+    }
 
     res.status(201).json(crawlJob);
   } catch (error) {

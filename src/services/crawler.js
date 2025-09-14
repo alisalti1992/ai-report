@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 const browserless = require('./browserless');
 const sitemapParser = require('./sitemapParser');
 const axios = require('axios');
+const EmailService = require('./email');
 
 class CrawlerService {
   constructor() {
@@ -9,6 +10,7 @@ class CrawlerService {
     this.processingJobs = new Set();
     this.intervalId = null;
     this.checkInterval = 30000; // Check every 30 seconds
+    this.emailService = new EmailService();
   }
 
   async findVerifiedJobs() {
@@ -443,7 +445,7 @@ class CrawlerService {
       console.log(`AI webhook results for job ${job.id}: ${aiWebhookSuccessful} success, ${aiWebhookFailed} failed, ${aiWebhookSkipped} skipped`);
       
       // Update job with crawl statistics
-      await prisma.crawlJob.update({
+      const completedJob = await prisma.crawlJob.update({
         where: { id: job.id },
         data: {
           status: 'completed',
@@ -467,6 +469,24 @@ class CrawlerService {
       });
       
       console.log(`Job ${job.id} marked as completed with crawl statistics`);
+      
+      // Send completion email notification
+      try {
+        await this.emailService.sendCompletionEmail(
+          completedJob.email,
+          completedJob.id,
+          completedJob.url,
+          {
+            totalPages: totalCrawled,
+            completedPages: aiWebhookSuccessful,
+            reportUrl: `${process.env.SERVICE_URL_APP || 'http://localhost:5555'}/report/${completedJob.id}`
+          }
+        );
+        console.log(`Completion email sent to ${completedJob.email} for job ${completedJob.id}`);
+      } catch (emailError) {
+        console.error('Error sending completion email:', emailError);
+        // Don't fail the job completion if email fails
+      }
       
     } catch (error) {
       console.error(`Error crawling sample pages for job ${job.id}:`, error);

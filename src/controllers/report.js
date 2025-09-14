@@ -304,7 +304,7 @@ function renderReportPage(job, message) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Website Report - ${appName}</title>
+        <title>AI Readability Report - ${appName}</title>
         <style>
             * {
                 margin: 0;
@@ -546,7 +546,7 @@ function renderReportPage(job, message) {
             ${message ? `<div class="alert">${message}</div>` : ''}
             
             <div class="card">
-                <h2 class="card-title">Website Analysis Report</h2>
+                <h2 class="card-title">AI Readability Report</h2>
                 
                 <div class="overview-grid">
                     <div class="stat-item">
