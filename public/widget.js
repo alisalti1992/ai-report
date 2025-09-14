@@ -10,7 +10,7 @@
                 return `${url.protocol}//${url.host}`;
             }
         }
-        return 'http://localhost:5555'; // fallback
+        return ''; // fallback to relative path
     }
     
     const widgetHost = getWidgetHost();
