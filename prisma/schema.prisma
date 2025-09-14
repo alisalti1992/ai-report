@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CrawlJob {
+  id            String   @id @default(uuid())
+  url           String
+  email         String
+  status        String   @default("pending")
+  verified      Boolean  @default(false)
+  verifyToken   String?
+  verifyAttempts Int     @default(0)
+  cancelled     Boolean  @default(false)
+  homepage      String?
+  robotsTxt     String?
+  sitemapXml    String?
+  sampleSitemap Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  pages         CrawlPage[]
+  
+  @@map("crawl_jobs")
+}
+
+model CrawlPage {
+  id          String   @id @default(uuid())
+  jobId       String
+  url         String
+  title       String?
+  html        String?
+  statusCode  Int?
+  pageType    String?  // blog, service, product, category, other
+  level       Int?     // sitemap level/depth
+  crawledAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  job         CrawlJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@map("crawl_pages")
+}

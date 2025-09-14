@@ -1,0 +1,39 @@
+{
+  "name": "ai-report",
+  "version": "1.0.0",
+  "description": "AI-powered web crawling and analysis platform",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "lint": "eslint .",
+    "build": "echo 'No build step required for Node.js'",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
+  },
+  "keywords": [
+    "ai",
+    "web-crawling",
+    "analysis",
+    "express",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.16.1",
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "prisma": "^6.16.1",
+    "puppeteer-core": "^24.20.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.45.0",
+    "nodemon": "^3.0.1"
+  }
+}

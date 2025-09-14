@@ -1,0 +1,62 @@
+const express = require('express');
+const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+require('dotenv').config();
+
+const swaggerSpecs = require('./config/swagger');
+const crawljobsRoutes = require('./routes/crawljobs');
+const crawlerService = require('./services/crawler');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Returns the health status of the API
+ *     responses:
+ *       200:
+ *         description: Health status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ */
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+app.use('/api', crawljobsRoutes);
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Start background crawler processor
+  crawlerService.startBackgroundProcessor();
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Received SIGINT. Graceful shutdown...');
+  crawlerService.stopBackgroundProcessor();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM. Graceful shutdown...');
+  crawlerService.stopBackgroundProcessor();
+  process.exit(0);
+});
