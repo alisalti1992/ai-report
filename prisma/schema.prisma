@@ -27,6 +27,7 @@ model CrawlJob {
   sitemapXml    String?
   sampleSitemap Json?
   crawlStats    Json?    // crawl statistics and completion info
+  crawlCompletionAI Json? // AI crawl completion webhook response
   error         String?  // main crawl error message if job fails
   errorDetails  Json?    // detailed error information with stack trace
   failedStep    String?  // which step failed (e.g. "robots.txt", "sitemap", "crawl_pages")
@@ -54,6 +55,9 @@ model CrawlPage {
   changefreq  String?  // sitemap changefreq
   lastmod     String?  // sitemap lastmod
   error       String?  // crawl error message if page fails
+  aiResponse  Json?    // AI webhook response data
+  aiError     String?  // AI webhook error message if failed
+  aiProcessed Boolean  @default(false) // whether AI webhook was attempted
   crawledAt   DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -163,6 +163,7 @@ class SitemapParserService {
   }
 
   createSampleSitemap(categories, maxPerCategory = 2) {
+    const firstLevelLimit = parseInt(process.env.CRAWL_FIRST_LEVEL_LIMIT) || 10;
     const sampleUrls = [];
     
     // Always include homepage if available
@@ -170,7 +171,7 @@ class SitemapParserService {
       sampleUrls.push(...categories.homepage.slice(0, 1));
     }
     
-    // Include first-level pages (but limit total)
+    // Include first-level pages (limit to 10 for crawling)
     const firstLevelPages = [];
     for (const category of Object.values(categories)) {
       const firstLevel = category.filter(url => url.level === 1);
@@ -185,7 +186,9 @@ class SitemapParserService {
       return a.loc.localeCompare(b.loc);
     });
     
-    sampleUrls.push(...firstLevelPages.slice(0, 10)); // Max 10 first-level pages
+    // Limit first-level pages for actual crawling
+    const limitedFirstLevelPages = firstLevelPages.slice(0, firstLevelLimit);
+    sampleUrls.push(...limitedFirstLevelPages);
     
     // Add sample pages from each category
     for (const [categoryName, categoryUrls] of Object.entries(categories)) {
@@ -211,14 +214,31 @@ class SitemapParserService {
       index === self.findIndex(u => u.loc === url.loc)
     );
     
-    console.log(`Created sample sitemap with ${uniqueUrls.length} URLs`);
+    console.log(`Created sample sitemap with ${uniqueUrls.length} URLs (limited first-level pages to ${firstLevelLimit})`);
     
     return {
-      urls: uniqueUrls,
+      urls: uniqueUrls, // Limited URLs for actual crawling
       categories: Object.fromEntries(
         Object.entries(categories).map(([key, value]) => [key, value.length])
       ),
-      totalOriginalUrls: Object.values(categories).reduce((sum, cat) => sum + cat.length, 0)
+      firstLevelPages: {
+        total: firstLevelPages.length,
+        crawled: limitedFirstLevelPages.length,
+        allPages: firstLevelPages.map(url => ({
+          url: url.loc,
+          title: url.title,
+          level: url.level,
+          pathname: url.pathname,
+          priority: url.priority,
+          changefreq: url.changefreq,
+          lastmod: url.lastmod
+        }))
+      },
+      totalOriginalUrls: Object.values(categories).reduce((sum, cat) => sum + cat.length, 0),
+      crawlingLimits: {
+        firstLevelLimit: firstLevelLimit,
+        maxPerCategory: maxPerCategory
+      }
     };
   }
 }

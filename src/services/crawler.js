@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma');
 const browserless = require('./browserless');
 const sitemapParser = require('./sitemapParser');
+const axios = require('axios');
 
 class CrawlerService {
   constructor() {
@@ -72,6 +73,16 @@ class CrawlerService {
       
       // Step 8: Crawl all pages in sample sitemap
       await this.crawlSamplePages(job);
+      
+      // Step 9: Send complete crawl data to AI webhook
+      try {
+        await this.sendCrawlCompletionToAI(job);
+        console.log(`Crawl completion AI webhook completed for job ${job.id}`);
+      } catch (error) {
+        console.error(`Crawl completion AI webhook failed for job ${job.id}:`, error.message);
+        // Don't fail the entire job if crawl completion webhook fails
+        // The error is already stored in the database by sendCrawlCompletionToAI
+      }
       
       return job;
     } catch (error) {
@@ -283,6 +294,9 @@ class CrawlerService {
       
       let totalCrawled = 0;
       let totalFailed = 0;
+      let aiWebhookSuccessful = 0;
+      let aiWebhookFailed = 0;
+      let aiWebhookSkipped = 0;
       
       for (const batch of batches) {
         console.log(`Processing batch of ${batch.length} pages`);
@@ -298,7 +312,7 @@ class CrawlerService {
             });
             
             // Store the crawled page in database
-            await prisma.crawlPage.create({
+            const crawledPage = await prisma.crawlPage.create({
               data: {
                 crawlJobId: job.id,
                 url: url.loc,
@@ -317,7 +331,59 @@ class CrawlerService {
             });
             
             console.log(`Successfully crawled and stored: ${url.loc}`);
-            return { success: true, url: url.loc };
+            
+            // Send page to AI webhook for real-time analysis
+            let aiSuccess = false;
+            try {
+              const aiResult = await this.sendPageToAIWebhook(updatedJob, crawledPage);
+              
+              // Update page with AI webhook results
+              const aiUpdateData = {
+                aiProcessed: true
+              };
+              
+              if (aiResult && aiResult.success) {
+                console.log(`Page sent to AI webhook successfully: ${url.loc}`);
+                aiSuccess = true;
+                aiUpdateData.aiResponse = aiResult.data;
+              } else if (aiResult && !aiResult.success) {
+                if (aiResult.skipped) {
+                  console.log(`AI webhook skipped for ${url.loc}: ${aiResult.error}`);
+                } else {
+                  console.warn(`AI webhook failed for ${url.loc}: ${aiResult.error}`);
+                }
+                aiUpdateData.aiError = aiResult.error;
+              }
+              
+              // Update the crawled page with AI webhook results
+              await prisma.crawlPage.update({
+                where: { id: crawledPage.id },
+                data: aiUpdateData
+              });
+              
+            } catch (aiError) {
+              console.error(`Error sending page to AI webhook ${url.loc}:`, aiError.message);
+              
+              // Store AI error in database
+              await prisma.crawlPage.update({
+                where: { id: crawledPage.id },
+                data: {
+                  aiProcessed: true,
+                  aiError: aiError.message
+                }
+              }).catch(updateError => {
+                console.error(`Failed to update page with AI error:`, updateError.message);
+              });
+              
+              // Don't fail the entire crawl if AI webhook fails
+            }
+            
+            return { 
+              success: true, 
+              url: url.loc, 
+              aiSuccess, 
+              aiSkipped: aiResult && aiResult.skipped 
+            };
             
           } catch (error) {
             console.error(`Failed to crawl page ${url.loc}:`, error.message);
@@ -344,7 +410,7 @@ class CrawlerService {
               console.error(`Failed to store error for ${url.loc}:`, dbError.message);
             });
             
-            return { success: false, url: url.loc, error: error.message };
+            return { success: false, url: url.loc, error: error.message, aiSuccess: false, aiSkipped: false };
           }
         });
         
@@ -354,11 +420,17 @@ class CrawlerService {
         // Count results
         const batchSuccess = batchResults.filter(r => r.success).length;
         const batchFailed = batchResults.filter(r => !r.success).length;
+        const batchAISuccess = batchResults.filter(r => r.aiSuccess).length;
+        const batchAISkipped = batchResults.filter(r => r.aiSkipped).length;
+        const batchAIFailed = batchResults.filter(r => r.success && !r.aiSuccess && !r.aiSkipped).length;
         
         totalCrawled += batchSuccess;
         totalFailed += batchFailed;
+        aiWebhookSuccessful += batchAISuccess;
+        aiWebhookSkipped += batchAISkipped;
+        aiWebhookFailed += batchAIFailed;
         
-        console.log(`Batch completed: ${batchSuccess} success, ${batchFailed} failed`);
+        console.log(`Batch completed: ${batchSuccess} success, ${batchFailed} failed, AI: ${batchAISuccess} success, ${batchAIFailed} failed, ${batchAISkipped} skipped`);
         
         // Small delay between batches to be respectful
         if (batches.indexOf(batch) < batches.length - 1) {
@@ -367,6 +439,7 @@ class CrawlerService {
       }
       
       console.log(`Completed crawling sample pages for job ${job.id}: ${totalCrawled} success, ${totalFailed} failed`);
+      console.log(`AI webhook results for job ${job.id}: ${aiWebhookSuccessful} success, ${aiWebhookFailed} failed, ${aiWebhookSkipped} skipped`);
       
       // Update job with crawl statistics
       await prisma.crawlJob.update({
@@ -377,6 +450,16 @@ class CrawlerService {
             totalPages: urls.length,
             successfulPages: totalCrawled,
             failedPages: totalFailed,
+            aiWebhook: {
+              successful: aiWebhookSuccessful,
+              failed: aiWebhookFailed,
+              skipped: aiWebhookSkipped,
+              total: totalCrawled, // Only successful crawls are sent to AI
+              enabled: !!process.env.AI_PAGE_ANALYZER_HOOK
+            },
+            crawlCompletionWebhook: {
+              enabled: !!process.env.AI_CRAWL_ANALYZER_HOOK
+            },
             completedAt: new Date().toISOString()
           }
         }
@@ -443,8 +526,12 @@ class CrawlerService {
         });
         
         console.log(`Created sample sitemap with ${sampleSitemap.urls.length} URLs from ${sampleSitemap.totalOriginalUrls} total URLs`);
+        if (sampleSitemap.firstLevelPages) {
+          console.log(`First-level pages: ${sampleSitemap.firstLevelPages.crawled} crawled out of ${sampleSitemap.firstLevelPages.total} total`);
+        }
         
       } else {
+        const firstLevelLimit = parseInt(process.env.CRAWL_FIRST_LEVEL_LIMIT) || 10;
         console.log('No sitemap.xml found, crawling homepage for links');
         
         // Crawl homepage to discover links
@@ -455,15 +542,20 @@ class CrawlerService {
         console.log(`Found ${homepageResult.links.length} links on homepage`);
         
         // Process discovered links to create sample sitemap
-        const sampleUrls = await this.createSampleFromHomepageLinks(
+        const sampleResult = await this.createSampleFromHomepageLinks(
           updatedJob.homepage, 
           homepageResult.links
         );
         
         const sampleSitemap = {
-          urls: sampleUrls,
-          categories: this.categorizeSampleUrls(sampleUrls),
-          totalOriginalUrls: sampleUrls.length,
+          urls: sampleResult.urls,
+          categories: this.categorizeSampleUrls(sampleResult.urls),
+          firstLevelPages: sampleResult.firstLevelPages,
+          totalOriginalUrls: sampleResult.urls.length,
+          crawlingLimits: {
+            firstLevelLimit: firstLevelLimit,
+            maxPerCategory: 2
+          },
           fallback: true,
           source: 'homepage_crawl'
         };
@@ -475,7 +567,8 @@ class CrawlerService {
           }
         });
         
-        console.log(`Created sample sitemap from homepage crawl with ${sampleUrls.length} URLs`);
+        console.log(`Created sample sitemap from homepage crawl with ${sampleResult.urls.length} URLs`);
+        console.log(`First-level pages: ${sampleResult.firstLevelPages.crawled} crawled out of ${sampleResult.firstLevelPages.total} total`);
       }
       
     } catch (error) {
@@ -586,6 +679,7 @@ class CrawlerService {
   }
 
   async createSampleFromHomepageLinks(homepage, links) {
+    const firstLevelLimit = parseInt(process.env.CRAWL_FIRST_LEVEL_LIMIT) || 10;
     const baseUrlObj = new URL(homepage);
     const sampleUrls = [];
     
@@ -645,13 +739,40 @@ class CrawlerService {
       return a.loc.localeCompare(b.loc);
     });
     
-    // Take a reasonable sample (max 20 links)
-    const selectedLinks = processedLinks.slice(0, 20);
+    // Separate first-level and deeper level pages
+    const firstLevelLinks = processedLinks.filter(link => link.level === 1);
+    const deeperLevelLinks = processedLinks.filter(link => link.level > 1);
+    
+    // Limit first-level pages based on environment variable
+    const limitedFirstLevel = firstLevelLinks.slice(0, firstLevelLimit);
+    
+    // Add remaining capacity with deeper level pages
+    const remainingCapacity = Math.max(0, 20 - limitedFirstLevel.length - 1); // -1 for homepage
+    const selectedDeeperLevel = deeperLevelLinks.slice(0, remainingCapacity);
+    
+    // Combine limited first-level and selected deeper level
+    const selectedLinks = [...limitedFirstLevel, ...selectedDeeperLevel];
     sampleUrls.push(...selectedLinks);
     
-    console.log(`Selected ${selectedLinks.length} links from homepage crawl`);
+    console.log(`Selected ${selectedLinks.length} links from homepage crawl (${limitedFirstLevel.length} first-level, ${selectedDeeperLevel.length} deeper)`);
+    console.log(`First-level pages limited to ${firstLevelLimit} from ${firstLevelLinks.length} available`);
     
-    return sampleUrls;
+    return {
+      urls: sampleUrls,
+      firstLevelPages: {
+        total: firstLevelLinks.length,
+        crawled: limitedFirstLevel.length,
+        allPages: firstLevelLinks.map(url => ({
+          url: url.loc,
+          title: url.linkText,
+          level: url.level,
+          pathname: url.pathname,
+          priority: url.priority,
+          changefreq: url.changefreq,
+          lastmod: url.lastmod
+        }))
+      }
+    };
   }
 
   shouldSkipLink(pathname) {
@@ -704,6 +825,246 @@ class CrawlerService {
     }
     
     return categories;
+  }
+
+  async sendPageToAIWebhook(job, page, retryCount = 0) {
+    const aiWebhookUrl = process.env.AI_PAGE_ANALYZER_HOOK;
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds
+    
+    if (!aiWebhookUrl) {
+      console.log('AI_PAGE_ANALYZER_HOOK not configured, skipping AI analysis');
+      return {
+        success: false,
+        error: 'AI webhook not configured',
+        skipped: true
+      };
+    }
+
+    try {
+      console.log(`Sending page to AI webhook: ${page.url}`);
+      
+      const webhookPayload = {
+        jobId: job.id,
+        jobEmail: job.email,
+        jobUrl: job.url,
+        homepage: job.homepage,
+        page: {
+          id: page.id,
+          url: page.url,
+          title: page.title,
+          html: page.html,
+          statusCode: page.statusCode,
+          level: page.level,
+          pathname: page.pathname,
+          segments: page.segments,
+          priority: page.priority,
+          changefreq: page.changefreq,
+          lastmod: page.lastmod,
+          crawledAt: page.crawledAt
+        },
+        metadata: {
+          timestamp: new Date().toISOString(),
+          source: 'ai-report-crawler',
+          version: '1.0'
+        }
+      };
+
+      const response = await axios.post(aiWebhookUrl, webhookPayload, {
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'AI-Report-Crawler/1.0'
+        }
+      });
+
+      console.log(`AI webhook response for ${page.url}: ${response.status}`);
+      
+      return {
+        success: true,
+        status: response.status,
+        data: response.data,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error(`AI webhook failed for ${page.url} (attempt ${retryCount + 1}):`, error.message);
+      
+      // Retry logic for temporary failures
+      if (retryCount < maxRetries && (
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ENOTFOUND' ||
+        (error.response && error.response.status >= 500)
+      )) {
+        console.log(`Retrying AI webhook for ${page.url} in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return this.sendPageToAIWebhook(job, page, retryCount + 1);
+      }
+
+      return {
+        success: false,
+        error: error.message,
+        status: error.response?.status || 0,
+        retryCount: retryCount + 1,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async sendCrawlCompletionToAI(job, retryCount = 0) {
+    const aiWebhookUrl = process.env.AI_CRAWL_ANALYZER_HOOK;
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds
+    
+    if (!aiWebhookUrl) {
+      console.log('AI_CRAWL_ANALYZER_HOOK not configured, skipping crawl completion analysis');
+      return null;
+    }
+
+    try {
+      // Get the complete job data with all crawled pages
+      const completeJob = await prisma.crawlJob.findUnique({
+        where: { id: job.id },
+        include: {
+          pages: {
+            select: {
+              id: true,
+              url: true,
+              title: true,
+              statusCode: true,
+              redirected: true,
+              finalUrl: true,
+              level: true,
+              pathname: true,
+              segments: true,
+              priority: true,
+              changefreq: true,
+              lastmod: true,
+              aiResponse: true,
+              aiError: true,
+              aiProcessed: true,
+              crawledAt: true
+            }
+          }
+        }
+      });
+
+      if (!completeJob) {
+        throw new Error('Job not found for crawl completion');
+      }
+
+      console.log(`Sending crawl completion data to AI webhook for job ${job.id}`);
+      
+      // Prepare the crawl completion payload
+      const crawlCompletionPayload = {
+        jobId: completeJob.id,
+        jobEmail: completeJob.email,
+        originalUrl: completeJob.url,
+        crawlInfo: {
+          homepage: completeJob.homepage,
+          status: completeJob.status,
+          createdAt: completeJob.createdAt,
+          updatedAt: completeJob.updatedAt,
+          crawlStats: completeJob.crawlStats
+        },
+        robotsTxt: completeJob.robotsTxt,
+        sampleSitemap: completeJob.sampleSitemap,
+        crawledPages: completeJob.pages.map(page => ({
+          id: page.id,
+          url: page.url,
+          title: page.title,
+          statusCode: page.statusCode,
+          redirected: page.redirected,
+          finalUrl: page.finalUrl,
+          level: page.level,
+          pathname: page.pathname,
+          segments: page.segments,
+          priority: page.priority,
+          changefreq: page.changefreq,
+          lastmod: page.lastmod,
+          aiResponse: page.aiResponse, // AI analysis results from individual page processing
+          aiError: page.aiError,
+          aiProcessed: page.aiProcessed,
+          crawledAt: page.crawledAt
+        })),
+        metadata: {
+          timestamp: new Date().toISOString(),
+          source: 'ai-report-crawler',
+          version: '1.0',
+          completionType: 'full_crawl'
+        }
+      };
+
+      const response = await axios.post(aiWebhookUrl, crawlCompletionPayload, {
+        timeout: 60000, // Longer timeout for completion webhook
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'AI-Report-Crawler/1.0'
+        }
+      });
+
+      console.log(`Crawl completion AI webhook response for job ${job.id}: ${response.status}`);
+      
+      // Store the crawl completion AI response in job
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: {
+          crawlCompletionAI: {
+            success: true,
+            status: response.status,
+            response: response.data,
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
+
+      return {
+        success: true,
+        status: response.status,
+        data: response.data,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error(`Crawl completion AI webhook failed for job ${job.id} (attempt ${retryCount + 1}):`, error.message);
+      
+      // Retry logic for temporary failures
+      if (retryCount < maxRetries && (
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ENOTFOUND' ||
+        (error.response && error.response.status >= 500)
+      )) {
+        console.log(`Retrying crawl completion AI webhook for job ${job.id} in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return this.sendCrawlCompletionToAI(job, retryCount + 1);
+      }
+
+      // Store the crawl completion AI error in job
+      await prisma.crawlJob.update({
+        where: { id: job.id },
+        data: {
+          crawlCompletionAI: {
+            success: false,
+            error: error.message,
+            status: error.response?.status || 0,
+            retryCount: retryCount + 1,
+            timestamp: new Date().toISOString()
+          }
+        }
+      }).catch(updateError => {
+        console.error(`Failed to store crawl completion AI error:`, updateError.message);
+      });
+
+      return {
+        success: false,
+        error: error.message,
+        status: error.response?.status || 0,
+        retryCount: retryCount + 1,
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 }
 
