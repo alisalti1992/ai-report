@@ -1,20 +1,60 @@
 (function() {
     'use strict';
     
+    // Get widget host from script tag
+    function getWidgetHost() {
+        const scripts = document.getElementsByTagName('script');
+        for (let script of scripts) {
+            if (script.src && script.src.includes('widget.js')) {
+                const url = new URL(script.src);
+                return `${url.protocol}//${url.host}`;
+            }
+        }
+        return 'http://localhost:5555'; // fallback
+    }
+    
+    const widgetHost = getWidgetHost();
+    
     // Default configuration
     const defaultConfig = {
-        apiUrl: 'http://localhost:5555',
+        apiUrl: widgetHost,
         apiToken: 'your-api-token',
-        theme: 'light',
-        primaryColor: '#3b82f6',
-        accentColor: '#10b981'
+        appName: 'AI Report',
+        logoUrl: '',
+        primaryColor: '#007bff',
+        accentColor: '#28a745'
     };
     
-    // Merge user config with defaults
-    const config = Object.assign({}, defaultConfig, window.AIReportConfig || {});
+    // Initialize widget when config is loaded
+    let config = Object.assign({}, defaultConfig);
+    
+    // Load configuration from server
+    function loadConfig() {
+        return new Promise((resolve) => {
+            if (window.AIReportConfig) {
+                config = Object.assign({}, defaultConfig, window.AIReportConfig);
+                resolve();
+                return;
+            }
+            
+            // Load config from server
+            const script = document.createElement('script');
+            script.onload = () => {
+                config = Object.assign({}, defaultConfig, window.AIReportConfig || {});
+                resolve();
+            };
+            script.onerror = () => {
+                console.warn('Could not load AI Report widget configuration, using defaults');
+                resolve();
+            };
+            script.src = `${widgetHost}/widget/config.js`;
+            document.head.appendChild(script);
+        });
+    }
     
     // Create widget CSS
-    const widgetCSS = `
+    function getWidgetCSS() {
+        return `
         .ai-report-widget {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             max-width: 400px;
@@ -37,6 +77,16 @@
             font-weight: 600;
             color: #111827;
             text-align: center;
+        }
+        
+        .ai-report-logo {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .ai-report-logo img {
+            max-height: 60px;
+            max-width: 200px;
         }
         
         .ai-report-widget p {
@@ -148,12 +198,18 @@
         .ai-report-powered-by a:hover {
             text-decoration: underline;
         }
-    `;
+        `;
+    }
     
     // Create widget HTML
-    const widgetHTML = `
+    function getWidgetHTML() {
+        return `
         <div class="ai-report-widget">
-            <h3>Get Your AI Website Report</h3>
+            ${config.logoUrl ? `
+                <div class="ai-report-logo">
+                    <img src="${config.logoUrl}" alt="${config.appName}" />
+                </div>
+            ` : `<h3>Get Your ${config.appName} Website Report</h3>`}
             <p>Analyze your website's performance, SEO, and user experience with AI-powered insights.</p>
             
             <form class="ai-report-form">
@@ -193,10 +249,11 @@
             </div>
             
             <div class="ai-report-powered-by">
-                Powered by <a href="https://github.com/alisalti1992/ai-report" target="_blank">AI Report</a>
+                Powered by <a href="https://github.com/alisalti1992/ai-report" target="_blank">${config.appName}</a>
             </div>
         </div>
-    `;
+        `;
+    }
     
     // Widget functionality
     class AIReportWidget {
@@ -210,12 +267,15 @@
             this.init();
         }
         
-        init() {
+        async init() {
+            // Load configuration first
+            await loadConfig();
+            
             // Inject CSS
             this.injectCSS();
             
             // Inject HTML
-            this.container.innerHTML = widgetHTML;
+            this.container.innerHTML = getWidgetHTML();
             
             // Bind events
             this.bindEvents();
@@ -226,7 +286,7 @@
             if (!document.getElementById('ai-report-widget-styles')) {
                 const style = document.createElement('style');
                 style.id = 'ai-report-widget-styles';
-                style.textContent = widgetCSS;
+                style.textContent = getWidgetCSS();
                 document.head.appendChild(style);
             }
         }
@@ -368,5 +428,20 @@
             }
         });
     });
+    
+    // Also try to init immediately if DOM is already loaded
+    if (document.readyState === 'loading') {
+        // Do nothing, wait for DOMContentLoaded
+    } else {
+        // DOM is already loaded
+        setTimeout(() => {
+            const commonIds = ['ai-report-widget', 'ai-report', 'website-report-widget'];
+            commonIds.forEach(id => {
+                if (document.getElementById(id) && !document.getElementById(id).innerHTML.trim()) {
+                    new AIReportWidget(id);
+                }
+            });
+        }, 100);
+    }
     
 })();

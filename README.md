@@ -4,12 +4,12 @@ AI-powered web crawling and analysis platform that generates comprehensive repor
 
 ## Project Status
 
-✅ **Phase 1-8, 11 Complete**: Core crawling infrastructure, AI integration, and frontend report views fully implemented  
-🚧 **Phase 9-10, 12**: Frontend widget, email verification, and deployment features in development
+✅ **Phase 1-9, 11 Complete**: Core crawling infrastructure, AI integration, frontend report views, and embeddable widget fully implemented  
+🚧 **Phase 10, 12**: Enhanced email verification and deployment features in development
 
 ## Features
 
-### ✅ Implemented (Phase 1-8, 11)
+### ✅ Implemented (Phase 1-9, 11)
 - **Web Crawling**: Intelligent browserless crawling with automatic background processing
 - **Smart Site Analysis**: Automatic homepage detection, robots.txt parsing, and sitemap discovery
 - **Adaptive Sampling**: Dynamic URL pattern detection and intelligent sample sitemap generation
@@ -25,10 +25,12 @@ AI-powered web crawling and analysis platform that generates comprehensive repor
 - **PDF Generation**: High-quality PDF export of analysis reports using Puppeteer
 - **Verification Pages**: User-friendly 6-digit code verification with branding support
 - **Environment Theming**: Customizable branding colors and logos via environment variables
+- **Embeddable Widget**: Cross-origin compatible widget with environment-based branding
+- **Widget Configuration**: Dynamic server-side configuration loading with CORS support
+- **Embed Code Generator**: Professional embed code generator with copy-to-clipboard functionality
 
-### 🚧 Planned (Phase 9-10, 12)
-- **Embeddable Widget**: Frontend form widget for any website
-- **2FA Email Verification**: Enhanced email verification system before processing
+### 🚧 Planned (Phase 10, 12)
+- **Enhanced Email Verification**: SMTP-based 2FA email verification system before processing
 - **Easy Deployment**: Docker support for simple server deployment
 
 ## Environment Variables
@@ -134,6 +136,8 @@ npm run build
 - `GET /report/:jobId` - Comprehensive website analysis report
 - `GET /report/:jobId/pdf` - Download PDF version of the report
 - `GET /public/widget.html` - Embeddable widget demo
+- `GET /widget/embed` - Widget embed code generator with copy-to-clipboard
+- `GET /widget/config.js` - Dynamic widget configuration (CORS enabled)
 
 ## API Documentation
 
