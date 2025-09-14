@@ -24,8 +24,8 @@
         primaryColor: '#007bff',
         accentColor: '#28a745'
     };
-    
-    // Initialize widget when config is loaded
+
+        // Initialize widget when config is loaded
     let config = Object.assign({}, defaultConfig);
     
     // Load configuration from server

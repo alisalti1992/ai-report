@@ -47,8 +47,8 @@ app.use('/', require('./routes/frontend'));
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Base App URL: ${process.env.BASE_APP_URL}`);
   
   // Start background crawler processor
   crawlerService.startBackgroundProcessor();
