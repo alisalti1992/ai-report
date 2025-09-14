@@ -334,8 +334,9 @@ class CrawlerService {
             
             // Send page to AI webhook for real-time analysis
             let aiSuccess = false;
+            let aiResult = null;
             try {
-              const aiResult = await this.sendPageToAIWebhook(updatedJob, crawledPage);
+              aiResult = await this.sendPageToAIWebhook(updatedJob, crawledPage);
               
               // Update page with AI webhook results
               const aiUpdateData = {
@@ -382,7 +383,7 @@ class CrawlerService {
               success: true, 
               url: url.loc, 
               aiSuccess, 
-              aiSkipped: aiResult && aiResult.skipped 
+              aiSkipped: aiResult?.skipped || false
             };
             
           } catch (error) {
@@ -871,7 +872,7 @@ class CrawlerService {
       };
 
       const response = await axios.post(aiWebhookUrl, webhookPayload, {
-        timeout: 30000,
+        timeout: 120000, // 2 minutes
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'AI-Report-Crawler/1.0'
@@ -997,7 +998,7 @@ class CrawlerService {
       };
 
       const response = await axios.post(aiWebhookUrl, crawlCompletionPayload, {
-        timeout: 60000, // Longer timeout for completion webhook
+        timeout: 120000, // 2 minutes for completion webhook
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'AI-Report-Crawler/1.0'
