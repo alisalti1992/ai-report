@@ -40,7 +40,7 @@ Copy `.env.example` to `.env` and configure:
 ```bash
 # Service Configuration
 PORT=5555
-SERVICE_URL_APP=http://localhost:5555
+BASE_APP_URL=http://localhost:5555
 API_TOKEN=your-secure-api-token
 
 # Database
@@ -183,7 +183,7 @@ The following environment variables are required for Docker deployment:
 **Essential Configuration:**
 - `DATABASE_URL` - PostgreSQL connection string (external database required)
 - `API_TOKEN` - Secure API token for authentication
-- `SERVICE_URL_APP` - Your public service URL
+- `BASE_APP_URL` - Your public service URL
 - `SMTP_USER`, `SMTP_PASS` - Email service credentials
 - `BROWSERLESS_URL`, `BROWSERLESS_TOKEN` - Browserless service for web crawling
 

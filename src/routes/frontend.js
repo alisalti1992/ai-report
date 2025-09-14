@@ -207,7 +207,7 @@ router.post('/verify/:jobId', verifyController.processVerification);
 // Widget configuration endpoint
 router.get('/widget/config.js', (req, res) => {
   const config = {
-    apiUrl: process.env.SERVICE_URL_APP || 'http://localhost:5555',
+    apiUrl: process.env.BASE_APP_URL || 'http://localhost:5555',
     apiToken: process.env.API_TOKEN || 'your-api-token',
     appName: process.env.APP_NAME || 'AI Report',
     logoUrl: process.env.APP_LOGO_URL || '',
@@ -227,7 +227,7 @@ router.get('/widget/embed', (req, res) => {
   const appName = process.env.APP_NAME || 'AI Report';
   const logoUrl = process.env.APP_LOGO_URL || '';
   const primaryColor = process.env.APP_PRIMARY_COLOR || '#007bff';
-  const serviceUrl = process.env.SERVICE_URL_APP || 'http://localhost:5555';
+  const serviceUrl = process.env.BASE_APP_URL || 'http://localhost:5555';
   
   res.send(`
     <!DOCTYPE html>

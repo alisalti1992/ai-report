@@ -479,7 +479,7 @@ class CrawlerService {
           {
             totalPages: totalCrawled,
             completedPages: aiWebhookSuccessful,
-            reportUrl: `${process.env.SERVICE_URL_APP || 'http://localhost:5555'}/report/${completedJob.id}`
+            reportUrl: `${process.env.BASE_APP_URL || 'http://localhost:5555'}/report/${completedJob.id}`
           }
         );
         console.log(`Completion email sent to ${completedJob.email} for job ${completedJob.id}`);

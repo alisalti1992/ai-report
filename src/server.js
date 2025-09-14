@@ -8,7 +8,7 @@ const crawljobsRoutes = require('./routes/crawljobs');
 const crawlerService = require('./services/crawler');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5555;
 
 app.use(cors());
 app.use(express.json());

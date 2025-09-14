@@ -18,7 +18,7 @@ class EmailService {
       logoUrl: process.env.APP_LOGO_URL || '',
       primaryColor: process.env.APP_PRIMARY_COLOR || '#007bff',
       accentColor: process.env.APP_ACCENT_COLOR || '#28a745',
-      serviceUrl: process.env.SERVICE_URL_APP || 'http://localhost:5555',
+      serviceUrl: process.env.BASE_APP_URL || 'http://localhost:5555',
       fromEmail: process.env.SMTP_FROM || `"AI Report" <noreply@localhost>`
     };
     
