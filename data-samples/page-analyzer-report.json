@@ -1,0 +1,119 @@
+
+[
+  {
+    "structured_data_schema": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "Schema.org markup (Article, WebPage, WebSite, Organization, Person) is implemented via Rank Math.",
+        "The `Article` schema accurately describes the page content (Privacy Policy) with headline, published/modified dates, author, and description.",
+        "The `Organization` schema correctly identifies 'Example Restaurant' and includes its logo.",
+        "The `WebPage` schema accurately defines the page and links it to the `WebSite` entity.",
+        "The `Person` schema for 'ali-admin' is present as the author.",
+        "Schema includes `datePublished` and `dateModified`, indicating content freshness.",
+        "The structured data provides clear entity recognition for LLMs, defining the organization and the nature of the content."
+      ],
+      "recommendations": [
+        "Consider adding a `ContactPoint` schema to the `Organization` to explicitly make the contact information machine-readable within the structured data, mirroring section 10 of the policy."
+      ]
+    },
+    "content_discoverability": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "A clear `<h1>` tag defines the main topic: 'Example Restaurant Data Protection Policy'.",
+        "Content is logically organized with distinct `<h2>` subheadings (e.g., 'Types of Personal Data Collected', 'How Personal Data Is Collected', 'Your Rights').",
+        "Bullet points (`<ul>`) are used effectively to present lists of information, such as types of data collected and purposes of data collection, aiding readability and AI parsing.",
+        "The language is straightforward and easy to understand, making it accessible to both human users and LLMs for summarization.",
+        "Key terms relevant to data privacy and protection are consistently used throughout the content.",
+        "Meta title and description are present and relevant to the page content."
+      ],
+      "recommendations": [
+        "Ensure anchor links are created for each `<h2>` section to allow for direct linking to specific policy points, further enhancing navigability for users and AI."
+      ]
+    },
+    "authority_trust": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "The page itself, being a comprehensive 'Privacy Policy', is a strong trust signal.",
+        "Clear contact information (address, phone number, email link) is provided, demonstrating transparency and accessibility.",
+        "The presence of `datePublished` and `dateModified` in both HTML meta and schema indicates up-to-date information.",
+        "Outbound link to Google's Privacy & Terms policies demonstrates responsible information sharing and reference to authoritative sources.",
+        "Social media links (Facebook, Instagram) in the footer provide additional avenues for brand verification and engagement.",
+        "Authorship information is included in the schema, attributing the content."
+      ],
+      "recommendations": [
+        "If available, consider adding a link to a 'Terms of Service' or 'Legal Disclaimer' page to further enhance comprehensive legal transparency."
+      ]
+    },
+    "pricing_products_service_transparency": {
+      "score": "N/A",
+      "observations": [
+        "This page is a 'Privacy Policy' and does not contain pricing, product, or service information."
+      ],
+      "tests_passed": [],
+      "recommendations": [
+        "No recommendations applicable for this specific page type."
+      ]
+    },
+    "accessibility_user_availability": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "The `viewport` meta tag is correctly set, ensuring responsiveness across different devices.",
+        "A 'Skip to content' link is present, enhancing navigation for screen reader users.",
+        "Semantic HTML elements like `<h1>`, `<h2>`, `<p>`, `<ul>`, `<a>` are used, providing a logical document structure.",
+        "Navigation elements include `aria-label` attributes, improving accessibility for assistive technologies.",
+        "Contact information (address, phone, email) is clearly listed, making it easy for users to reach out for assistance or queries."
+      ],
+      "recommendations": [
+        "Conduct a full accessibility audit (e.g., WCAG compliance) to identify any potential hidden barriers for users with disabilities."
+      ]
+    },
+    "entity_location_contextual_information": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "The `Organization` schema clearly defines 'Example Restaurant' as the entity.",
+        "The page title and `h1` explicitly state 'Privacy Policy - Example Restaurant', clearly establishing the page's context and relevance to the organization.",
+        "Specific location details (address: '167-169 Telok Ayer Street, Singapore 068620') are provided in the contact section, offering concrete geographic context.",
+        "The page content clearly explains 'what' the policy covers (data collection, usage, rights), providing robust contextual information for AI understanding."
+      ],
+      "recommendations": [
+        "Embed a map (e.g., Google Maps) for the mentioned address on the contact page, enhancing geographical entity recognition and user convenience, if not already present there."
+      ]
+    },
+    "technical_infrastructure_performance": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "A self-referencing canonical URL (`https://example.com.sg/privacy-policy/`) is correctly implemented, preventing duplicate content issues.",
+        "The `robots` meta tag is set to `index, follow`, allowing search engines and AI crawlers full access to the page content.",
+        "WordPress and Elementor are used, which typically provide a solid technical foundation, though performance can vary with specific configurations.",
+        "The site appears to use a caching plugin (LiteSpeed Cache), which generally improves load times.",
+        "Lazy loading is indicated for background images (`e-lazyloaded`), which can contribute to faster initial page load for users.",
+        "Proper `charset` and `viewport` meta tags are in place."
+      ],
+      "recommendations": [
+        "Continuously monitor Core Web Vitals to ensure optimal user experience and search engine ranking, as some JS/CSS files are loaded synchronously.",
+        "Review the number of CSS and JS files being loaded to identify opportunities for minification and concatenation, even with caching in place."
+      ]
+    },
+    "policy_transparency_readiness": {
+      "score": "Good",
+      "observations": [],
+      "tests_passed": [
+        "The page is dedicated to the 'Data Protection Policy', ensuring explicit transparency regarding user data handling.",
+        "The policy covers key aspects such as data types collected, collection methods, purpose of collection, data security, sharing, retention, and user rights.",
+        "Contact information is readily available for users to exercise their rights or seek clarification.",
+        "A clear statement about 'Updates to this Policy' is included, indicating a commitment to ongoing transparency.",
+        "The content is well-structured with headings and lists, making the policies easy for both users and AI to digest and comprehend.",
+        "A link to Google's Privacy & Terms for Google Analytics data collection is provided, showing transparency about third-party data processing."
+      ],
+      "recommendations": [
+        "Consider providing a version number or a more detailed change log for policy updates to enhance trust and transparency over time."
+      ]
+    }
+  }
+]
