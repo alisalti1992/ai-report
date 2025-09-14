@@ -36,8 +36,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Serve static files from public directory
+app.use('/public', express.static('public'));
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.use('/api', crawljobsRoutes);
+
+// Frontend Routes
+app.use('/', require('./routes/frontend'));
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

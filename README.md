@@ -4,12 +4,12 @@ AI-powered web crawling and analysis platform that generates comprehensive repor
 
 ## Project Status
 
-✅ **Phase 1-8 Complete**: Core crawling infrastructure and AI integration fully implemented  
-🚧 **Phase 9-12**: Frontend widget, report views, and deployment features in development
+✅ **Phase 1-8, 11 Complete**: Core crawling infrastructure, AI integration, and frontend report views fully implemented  
+🚧 **Phase 9-10, 12**: Frontend widget, email verification, and deployment features in development
 
 ## Features
 
-### ✅ Implemented (Phase 1-8)
+### ✅ Implemented (Phase 1-8, 11)
 - **Web Crawling**: Intelligent browserless crawling with automatic background processing
 - **Smart Site Analysis**: Automatic homepage detection, robots.txt parsing, and sitemap discovery
 - **Adaptive Sampling**: Dynamic URL pattern detection and intelligent sample sitemap generation
@@ -21,10 +21,14 @@ AI-powered web crawling and analysis platform that generates comprehensive repor
 - **Crawl Completion AI**: Complete crawl analysis with optimized data payload
 - **AI Response Storage**: Full AI webhook response tracking and error handling
 - **Comprehensive Error Tracking**: Detailed error logging and step-by-step failure analysis
+- **Frontend Report Views**: Complete website analysis reports with AI insights display
+- **PDF Generation**: High-quality PDF export of analysis reports using Puppeteer
+- **Verification Pages**: User-friendly 6-digit code verification with branding support
+- **Environment Theming**: Customizable branding colors and logos via environment variables
 
-### 🚧 Planned (Phase 9-12)
+### 🚧 Planned (Phase 9-10, 12)
 - **Embeddable Widget**: Frontend form widget for any website
-- **Report Views**: Detailed report overview and page-by-page analysis
+- **2FA Email Verification**: Enhanced email verification system before processing
 - **Easy Deployment**: Docker support for simple server deployment
 
 ## Environment Variables
@@ -122,6 +126,14 @@ npm run build
 - `POST /api/crawljobs` - Create new crawl job
 - `POST /api/crawljobs/verify` - Verify crawl job with email code
 - `GET /api/health` - Health check endpoint
+
+### Frontend Endpoints
+
+- `GET /` - Homepage with service overview
+- `GET /verify/:jobId` - Job verification page with 6-digit code input
+- `GET /report/:jobId` - Comprehensive website analysis report
+- `GET /report/:jobId/pdf` - Download PDF version of the report
+- `GET /public/widget.html` - Embeddable widget demo
 
 ## API Documentation
 
