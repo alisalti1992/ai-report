@@ -208,20 +208,30 @@ const showPageReport = async (req, res) => {
 };
 
 const generatePageReportPDF = async (req, res) => {
+  let browser;
   try {
     const { jobId, pageId } = req.params;
 
+    // Get job and page data
     const job = await prisma.crawlJob.findUnique({
       where: { id: jobId },
-      select: { id: true, status: true, verified: true }
+      select: {
+        id: true,
+        url: true,
+        email: true,
+        status: true,
+        verified: true,
+        homepage: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
 
     const page = await prisma.crawlPage.findUnique({
       where: { 
         id: pageId,
         crawlJobId: jobId
-      },
-      select: { id: true, aiProcessed: true }
+      }
     });
 
     if (!job || !job.verified || !page) {
@@ -232,12 +242,100 @@ const generatePageReportPDF = async (req, res) => {
       return res.redirect(`/report/${jobId}/${pageId}?message=Page analysis is still being processed. Please check back in a few minutes.`);
     }
 
-    // For now, redirect to HTML version
-    // TODO: Implement actual PDF generation
-    res.redirect(`/report/${jobId}/${pageId}?message=PDF generation will be available soon. Viewing HTML version.`);
+    // Generate PDF using Puppeteer
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
+    });
+
+    const pdfPage = await browser.newPage();
+    
+    // Set viewport for consistent rendering
+    await pdfPage.setViewport({ width: 1200, height: 800 });
+    
+    // Generate PDF-optimized HTML content
+    const htmlContent = renderPageReportPageForPDF(job, page);
+    console.log('Page report HTML content length:', htmlContent.length);
+    
+    // Set content with proper waiting
+    await pdfPage.setContent(htmlContent, { 
+      waitUntil: ['networkidle0', 'domcontentloaded'],
+      timeout: 30000 
+    });
+    
+    console.log('Page report content loaded successfully');
+
+    // Wait a bit more for any async content
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Generate PDF with better options
+    console.log('Generating page report PDF...');
+    const pdfBuffer = await pdfPage.pdf({
+      format: 'A4',
+      printBackground: true,
+      preferCSSPageSize: false,
+      margin: {
+        top: '0.8in',
+        right: '0.6in',
+        bottom: '0.8in',
+        left: '0.6in'
+      },
+      displayHeaderFooter: false
+    });
+
+    console.log('Page report PDF generated, buffer length:', pdfBuffer.length);
+
+    // Close browser before sending response
+    await browser.close();
+    browser = null;
+
+    // Validate PDF buffer
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('Generated PDF buffer is empty');
+    }
+
+    // Set headers for PDF download
+    const filename = `page-report-${page.title || 'page'}-${pageId}.pdf`.replace(/[^a-zA-Z0-9.-]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
+
+    // Send PDF
+    res.end(pdfBuffer);
+
   } catch (error) {
     console.error('Error generating page report PDF:', error);
-    res.redirect(`/report/${req.params.jobId}/${req.params.pageId}?message=Error generating PDF. Please try again.`);
+    console.error('Page PDF Error details:', {
+      message: error.message,
+      stack: error.stack,
+      jobId: req.params.jobId,
+      pageId: req.params.pageId
+    });
+    
+    // Send error response instead of redirect for better debugging
+    res.status(500).json({
+      error: 'Page PDF generation failed',
+      message: error.message,
+      jobId: req.params.jobId,
+      pageId: req.params.pageId
+    });
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error('Error closing browser:', closeError);
+      }
+    }
   }
 };
 
@@ -591,12 +689,19 @@ function renderReportPage(job, message) {
                 <div class="card">
                     <h2 class="card-title">Crawled Pages Summary</h2>
                     <div class="pages-table">
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed;">
+                            <colgroup>
+                                <col style="width: 25%;">
+                                <col style="width: 45%;">
+                                <col style="width: 12%;">
+                                <col style="width: 18%;">
+                            </colgroup>
                             <thead>
                                 <tr style="background: #f8fafc; border-bottom: 2px solid #e5e7eb;">
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e5e7eb;">Page Title</th>
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e5e7eb;">URL</th>
                                     <th style="padding: 12px; text-align: center; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e5e7eb;">Status</th>
+                                    <th style="padding: 12px; text-align: center; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e5e7eb;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -608,6 +713,17 @@ function renderReportPage(job, message) {
                                             <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${page.statusCode >= 200 && page.statusCode < 300 ? '#10b98120' : '#ef444420'}; color: ${page.statusCode >= 200 && page.statusCode < 300 ? '#10b981' : '#ef4444'};">
                                                 ${page.statusCode || 'Failed'}
                                             </span>
+                                        </td>
+                                        <td style="padding: 12px; text-align: center;">
+                                            ${page.aiProcessed ? `
+                                                <a href="/report/${job.id}/${page.id}" style="display: inline-block; padding: 8px 14px; background: ${primaryColor}; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500; transition: background 0.15s ease; white-space: nowrap;">
+                                                    View Report
+                                                </a>
+                                            ` : `
+                                                <span style="padding: 8px 14px; background: #f1f5f9; color: #64748b; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                                                    Processing...
+                                                </span>
+                                            `}
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -1405,7 +1521,7 @@ function renderPageReportPage(job, page, message) {
                 
                 <div class="actions">
                     <a href="/report/${job.id}" class="btn btn-outline">← Back to Report</a>
-                    ${page.aiResponse ? `<a href="/report/${job.id}/${page.id}.pdf" class="btn btn-primary">Download PDF</a>` : ''}
+                    ${page.aiResponse ? `<a href="/report/${job.id}/${page.id}/pdf" class="btn btn-primary">Download PDF</a>` : ''}
                 </div>
             </div>
         </div>
@@ -1452,7 +1568,371 @@ function renderDetailedAIAnalysis(aiResponse) {
               <div class="ai-section">
                 <h4 class="ai-section-title">Tests Passed</h4>
                 <ul class="ai-list tests-passed">
-                  ${category.tests_passed.map(test => `<li>${test}</li>`).join('')}
+                  ${category.tests_passed.map(test => `<li>${escapeHtml(test)}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+            
+            ${category.recommendations && Array.isArray(category.recommendations) && category.recommendations.length > 0 ? `
+              <div class="ai-section">
+                <h4 class="ai-section-title">Recommendations</h4>
+                <ul class="ai-list recommendations">
+                  ${category.recommendations.map(rec => `<li>${escapeHtml(rec)}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderPageReportPageForPDF(job, page) {
+  const appName = process.env.APP_NAME || 'AI Report';
+  const primaryColor = process.env.APP_PRIMARY_COLOR || '#007bff';
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Page Report - ${escapeHtml(page.title || 'Untitled')} - ${appName}</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                background-color: #ffffff;
+                color: #334155;
+                line-height: 1.4;
+                font-size: 13px;
+            }
+            
+            .header {
+                background: ${primaryColor};
+                color: white;
+                padding: 15px 0;
+                margin-bottom: 15px;
+                text-align: center;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+                margin-bottom: 6px;
+            }
+            
+            .header .subtitle {
+                font-size: 13px;
+                opacity: 0.9;
+            }
+            
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 0 15px;
+            }
+            
+            .card {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                margin-bottom: 10px;
+                padding: 15px;
+                break-inside: avoid;
+            }
+            
+            .card-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: #1e293b;
+                margin-bottom: 10px;
+                border-bottom: 2px solid ${primaryColor};
+                padding-bottom: 6px;
+            }
+            
+            .page-header {
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 12px;
+                margin-bottom: 15px;
+            }
+            
+            .page-title {
+                font-size: 20px;
+                font-weight: 700;
+                color: #1e293b;
+                margin-bottom: 8px;
+            }
+            
+            .page-url {
+                color: ${primaryColor};
+                font-size: 12px;
+                word-break: break-all;
+                margin-bottom: 12px;
+            }
+            
+            .page-meta {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                font-size: 12px;
+            }
+            
+            .meta-item {
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            .meta-label {
+                font-weight: 500;
+                color: #64748b;
+            }
+            
+            .meta-value {
+                font-weight: 600;
+                color: #1e293b;
+            }
+            
+            .status-success {
+                color: #10b981;
+            }
+            
+            .status-error {
+                color: #ef4444;
+            }
+            
+            .ai-analysis {
+                display: grid;
+                gap: 10px;
+            }
+            
+            .ai-category {
+                background: #f8fafc;
+                border-radius: 6px;
+                padding: 12px;
+                border-left: 4px solid ${primaryColor};
+                break-inside: avoid;
+                margin-bottom: 6px;
+            }
+            
+            .ai-category-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+            
+            .ai-category-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+            
+            .ai-score {
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            
+            .ai-section {
+                margin-bottom: 8px;
+            }
+            
+            .ai-section-title {
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 8px;
+                font-size: 14px;
+            }
+            
+            .ai-list {
+                list-style: none;
+                padding: 0;
+            }
+            
+            .ai-list li {
+                padding: 6px 0;
+                border-bottom: 1px solid #e5e7eb;
+                color: #64748b;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            
+            .ai-list li:last-child {
+                border-bottom: none;
+            }
+            
+            .ai-list.tests-passed li {
+                position: relative;
+                padding-left: 16px;
+            }
+            
+            .ai-list.tests-passed li:before {
+                content: "✓";
+                position: absolute;
+                left: 0;
+                color: #10b981;
+                font-weight: bold;
+            }
+            
+            .ai-list.recommendations li {
+                position: relative;
+                padding-left: 16px;
+            }
+            
+            .ai-list.recommendations li:before {
+                content: "💡";
+                position: absolute;
+                left: 0;
+            }
+            
+            .error-box {
+                background: #fef2f2;
+                border: 1px solid #fca5a5;
+                color: #dc2626;
+                padding: 12px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+                font-size: 12px;
+            }
+            
+            .meta-info {
+                display: flex;
+                gap: 15px;
+                flex-wrap: wrap;
+                margin-bottom: 15px;
+                padding: 10px;
+                background: #f1f5f9;
+                border-radius: 4px;
+                font-size: 11px;
+            }
+            
+            .meta-info strong {
+                color: #1e293b;
+            }
+            
+            @media print {
+                body { font-size: 11px; }
+                .header { margin-bottom: 15px; padding: 15px 0; }
+                .card { margin-bottom: 15px; padding: 15px; }
+                .ai-category { margin-bottom: 12px; padding: 12px; }
+                .meta-info { margin-bottom: 12px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="container">
+                <h1>${appName} - Page Analysis Report</h1>
+                <div class="subtitle">Detailed AI-powered page analysis</div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <div class="page-header">
+                    <h1 class="page-title">${escapeHtml(page.title || 'Untitled Page')}</h1>
+                    <div class="page-url">${escapeHtml(page.url)}</div>
+                    
+                    <div class="page-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Status Code:</span>
+                            <span class="meta-value ${page.statusCode >= 200 && page.statusCode < 300 ? 'status-success' : 'status-error'}">
+                                ${page.statusCode || 'Failed'}
+                            </span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Page Level:</span>
+                            <span class="meta-value">${page.level || 0}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Redirected:</span>
+                            <span class="meta-value">${page.redirected ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">AI Processed:</span>
+                            <span class="meta-value ${page.aiProcessed ? 'status-success' : 'status-error'}">
+                                ${page.aiProcessed ? 'Yes' : 'No'}
+                            </span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Crawled:</span>
+                            <span class="meta-value">${new Date(page.crawledAt).toLocaleString()}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Website:</span>
+                            <span class="meta-value">${escapeHtml(job.url)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${page.error ? `
+                    <div class="error-box">
+                        <strong>Crawl Error:</strong> ${escapeHtml(page.error)}
+                    </div>
+                ` : ''}
+                
+                ${page.aiError && page.aiProcessed ? `
+                    <div class="error-box">
+                        <strong>AI Analysis Error:</strong> ${escapeHtml(page.aiError)}
+                    </div>
+                ` : ''}
+                
+                ${page.aiResponse ? renderDetailedAIAnalysisForPDF(page.aiResponse) : 
+                  page.aiProcessed ? `<p style="color: #ef4444; text-align: center; padding: 30px;">AI Analysis failed for this page.</p>` : 
+                  `<p style="color: #64748b; text-align: center; padding: 30px;">AI analysis is still being processed...</p>`}
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+}
+
+function renderDetailedAIAnalysisForPDF(aiResponse) {
+  if (!aiResponse || typeof aiResponse !== 'object') return '';
+  
+  const categories = Object.keys(aiResponse);
+  if (categories.length === 0) return '';
+  
+  return `
+    <div class="ai-analysis">
+      <h2 class="card-title">AI Analysis Results</h2>
+      ${categories.map(categoryKey => {
+        const category = aiResponse[categoryKey];
+        if (!category || typeof category !== 'object') return '';
+        
+        const scoreInfo = formatAIScore(category.score);
+        return `
+          <div class="ai-category">
+            <div class="ai-category-header">
+              <h3 class="ai-category-title">${categoryKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h3>
+              ${category.score ? `
+                <div class="ai-score" style="background: ${scoreInfo.color}20; color: ${scoreInfo.color};">
+                  ${category.score}
+                </div>
+              ` : ''}
+            </div>
+            
+            ${category.observations && Array.isArray(category.observations) && category.observations.length > 0 ? `
+              <div class="ai-section">
+                <h4 class="ai-section-title">Key Observations</h4>
+                <ul class="ai-list">
+                  ${category.observations.map(obs => `<li>${escapeHtml(obs)}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+            
+            ${category.tests_passed && Array.isArray(category.tests_passed) && category.tests_passed.length > 0 ? `
+              <div class="ai-section">
+                <h4 class="ai-section-title">Tests Passed</h4>
+                <ul class="ai-list tests-passed">
+                  ${category.tests_passed.map(test => `<li>${escapeHtml(test)}</li>`).join('')}
                 </ul>
               </div>
             ` : ''}

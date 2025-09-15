@@ -308,7 +308,7 @@ class CrawlerService {
           try {
             console.log(`Crawling page: ${url.loc}`);
             
-            // Crawl the page using browserless
+            // Crawl the page using browserless with enhanced error handling
             const pageResult = await browserless.crawlPage(url.loc, {
               extractLinks: false // We don't need links for stored pages
             });

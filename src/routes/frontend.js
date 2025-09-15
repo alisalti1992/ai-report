@@ -497,6 +497,6 @@ window.AIReportConfig = {
 router.get('/report/:jobId', reportController.showReport);
 router.get('/report/:jobId/pdf', reportController.generateReportPDF);
 router.get('/report/:jobId/:pageId', reportController.showPageReport);
-router.get('/report/:jobId/:pageId.pdf', reportController.generatePageReportPDF);
+router.get('/report/:jobId/:pageId/pdf', reportController.generatePageReportPDF);
 
 module.exports = router;
